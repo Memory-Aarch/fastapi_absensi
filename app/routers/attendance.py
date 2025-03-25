@@ -1,37 +1,34 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.database import SessionLocal
-from app.models import Attendance
+from app.database import get_db
+from app.models import Attendance, User
+from app.schemas import AttendanceCreate, AttendanceResponse
+from app.core.dependencies import get_current_user
 from datetime import datetime
 
-attendance_router = APIRouter()
+router = APIRouter(prefix="/attendance", tags=["Attendance"])
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-@attendance_router.post("/check-in")
-def check_in(user_id: int, db: Session = Depends(get_db)):
-    today = datetime.utcnow().date()
-    if db.query(Attendance).filter(Attendance.user_id == user_id, Attendance.date == today).first():
-        raise HTTPException(status_code=400, detail="Sudah check-in hari ini")
-
-    new_attendance = Attendance(user_id=user_id, date=today, check_in_time=datetime.utcnow())
+@router.post("/", response_model=AttendanceResponse)
+def create_attendance(
+    attendance_data: AttendanceCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    new_attendance = Attendance(
+        user_id=current_user.id,
+        check_in=attendance_data.check_in or datetime.utcnow(),
+        check_out=attendance_data.check_out,
+        status=attendance_data.status,
+    )
     db.add(new_attendance)
     db.commit()
-    return {"msg": "Check-in berhasil"}
+    db.refresh(new_attendance)
+    return new_attendance
 
-@attendance_router.post("/check-out")
-def check_out(user_id: int, db: Session = Depends(get_db)):
-    today = datetime.utcnow().date()
-    attendance = db.query(Attendance).filter(Attendance.user_id == user_id, Attendance.date == today).first()
-
-    if not attendance:
-        raise HTTPException(status_code=400, detail="Belum check-in hari ini")
-
-    attendance.check_out_time = datetime.utcnow()
-    db.commit()
-    return {"msg": "Check-out berhasil"}
+@router.get("/history", response_model=list[AttendanceResponse])
+def get_attendance_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    history = db.query(Attendance).filter(Attendance.user_id == current_user.id).all()
+    return history

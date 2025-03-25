@@ -1,26 +1,16 @@
 from fastapi import FastAPI
-from app.routers.auth import auth_router
-from app.routers.attendance import attendance_router
-from app.routers.admin import admin_router
-from app.scheduler.job import scheduler
-from app.core.config import SECRET_KEY
+from .database import engine, Base
+from .routers import user_router
 
+# Inisialisasi database
+Base.metadata.create_all(bind=engine)
 
+# Inisialisasi aplikasi FastAPI
 app = FastAPI()
 
-app.include_router(auth_router, prefix="/auth", tags=["Auth"])
-app.include_router(attendance_router, prefix="/attendance", tags=["Attendance"])
-app.include_router(admin_router, prefix="/admin", tags=["Admin"])
-
-
-# Mulai scheduler (auto reminder)
-scheduler.start()
+# Registrasi router
+app.include_router(user_router, prefix="/users", tags=["Users"])
 
 @app.get("/")
-def home():
-    return {"message": "Welcome to Absensi API"}
-
-# Menjalankan server hanya jika dijalankan sebagai skrip utama
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+def root():
+    return {"message": "Welcome to FastAPI Absensi App"}

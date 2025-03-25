@@ -1,15 +1,12 @@
-import os
-from dotenv import load_dotenv
+from pydantic import BaseSettings
 
-# Muat variabel dari file .env
-load_dotenv()
+class Settings(BaseSettings):
+    DATABASE_URL: str = "sqlite:///./database.db"
+    SECRET_KEY: str = "your_secret_key"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
-SECRET_KEY = os.getenv("SECRET_KEY", "default_secret_key")
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./app/database.db")
-    
-    # The code above is a snippet from the config.py file in the core directory. 
-    # This file contains the configuration for the application, such as the SECRET_KEY and DATABASE_URL variables. 
-    # The SECRET_KEY variable is used to sign and verify JWT tokens, while the DATABASE_URL variable is used to connect to the database.
-    # The load_dotenv() function is used to load environment variables from a .env file. 
-    # This file should be placed in the root directory of the project and contain the following variables: 
-    # SECRET_KEY=your_secret_key_here
+    class Config:
+        env_file = ".env"
+
+settings = Settings()
